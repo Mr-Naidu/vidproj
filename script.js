@@ -188,21 +188,30 @@ function stopVideoStream() {
 }
 
 function createPeer() {
+  // Always create fresh remote stream before any tracks are added
+  remoteStream = new MediaStream();
+  remoteVideo.srcObject = remoteStream;
+
   peer = new RTCPeerConnection({
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" }
     ]
   });
 
+  // Add local stream tracks
   localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
 
-  peer.onicecandidate = (e) => {
-    if (e.candidate) socket.emit("webrtc-ice", e.candidate);
-  };
-
+  // Listen for remote tracks
   peer.ontrack = (e) => {
+    console.log("👀 Received remote track");
     e.streams[0].getTracks().forEach(track => {
       remoteStream.addTrack(track);
     });
   };
+
+  // Send ICE candidates
+  peer.onicecandidate = (e) => {
+    if (e.candidate) socket.emit("webrtc-ice", e.candidate);
+  };
 }
+
