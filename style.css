@@ -1,0 +1,158 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #222;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.container {
+  text-align: center;
+  width: 100%;
+  max-width: 400px;
+}
+
+#unifiedBox {
+  width: 100%;
+  background: #333;
+  border-radius: 10px;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+/* Message Area */
+#messages {
+  height: 300px;
+  overflow-y: auto;
+  background: #111;
+  border: 1px solid #444;
+  padding: 10px;
+  margin-bottom: 10px;
+  text-align: left;
+  font-size: 16px;
+  display: flex;
+  flex-direction: column;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+#messages div {
+  margin-bottom: 8px;
+  padding: 8px;
+  background-color: #222;
+  border-radius: 6px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+/* Message Styles */
+.message {
+  max-width: 80%;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  font-size: 15px;
+  display: inline-block;
+  position: relative;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.user {
+  background-color: #075e54;
+  color: white;
+  align-self: flex-end;
+  text-align: right;
+  margin-left: auto;
+}
+
+.bot {
+  background-color: #333;
+  color: white;
+  align-self: flex-start;
+  text-align: left;
+  margin-right: auto;
+}
+
+/* Input Area */
+#messageInput {
+  width: 100%;
+  min-height: 40px;
+  max-height: 200px;
+  font-size: 16px;
+  padding: 10px;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.4;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+#sendBtn {
+  width: 28%;
+  padding: 10px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+/* Video Area */
+#videoUI video {
+  width: 100%;
+  max-height: 200px;
+  margin-bottom: 10px;
+  border: 2px solid #555;
+  border-radius: 10px;
+}
+
+#videoUI,
+#textUI {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+
+/* Buttons */
+button {
+  margin: 5px;
+  padding: 10px;
+  font-size: 14px;
+}
+
+.hidden {
+  display: none;
+}
+
+/* Responsive Tweaks */
+@media (max-width: 480px) {
+  #messageInput, #sendBtn {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  #messages {
+    height: 250px;
+  }
+
+  #videoUI video {
+    max-height: 180px;
+  }
+
+  #switchToChatBtn, #nextVideoBtn, #switchToVideoBtn, #nextBtn {
+    width: 90%;
+    margin: 8px 0;
+  }
+}

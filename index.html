@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChatY00</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <!-- Mode Selection -->
+    <div id="modeSelect">
+      <h1>Welcome to ChatY00</h1>
+      <button id="textModeBtn">Text Chat</button>
+      <button id="videoModeBtn">Video Call</button>
+    </div>
+
+    <!-- Unified Box for Both Modes -->
+    <div id="unifiedBox" class="hidden">
+      <!-- Chat UI -->
+      <div id="textUI">
+        <div id="messages"></div>
+        <textarea id="messageInput" placeholder="Type a message..."></textarea>
+        <button id="sendBtn">Send</button>
+        <button id="switchToVideoBtn">Switch to Video</button>
+        <button id="nextBtn">Next Chat</button>
+      </div>
+
+    <!-- Video UI -->
+      <div id="videoUI" class="hidden">
+        <video id="localVideo" autoplay muted></video>
+        <video id="remoteVideo" autoplay></video>
+        <button id="switchToChatBtn">Switch to Chat</button>
+        <button id="nextVideoBtn">Next Video</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
