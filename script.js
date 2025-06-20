@@ -14,8 +14,6 @@ const nextBtn = document.getElementById("nextBtn");
 const switchToVideoBtn = document.getElementById("switchToVideoBtn");
 
 const videoStatus = document.getElementById("videoStatus");
-
-
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 const switchToChatBtn = document.getElementById("switchToChatBtn");
@@ -23,8 +21,8 @@ const nextVideoBtn = document.getElementById("nextVideoBtn");
 
 let currentMode = null;
 let localStream;
+let remoteStream;
 let peer;
-let remoteStream = new MediaStream();
 
 // ==== MODE SELECT ====
 textModeBtn.onclick = () => {
@@ -121,7 +119,7 @@ socket.on("match", async () => {
   appendMessage("✅ Connected to a stranger!", "bot");
   if (currentMode === "video") {
     videoStatus.textContent = "✅ Connected!";
-    createPeer();
+    createPeer(); // must be here too
     if (peer.localDescription) return;
     const offer = await peer.createOffer();
     await peer.setLocalDescription(offer);
@@ -141,9 +139,9 @@ socket.on("partner-disconnected", () => {
   stopVideoStream();
 });
 
-
 // ==== WEBRTC SIGNALING ====
 socket.on("webrtc-offer", async (offer) => {
+  await startVideoStream(); // ensure local stream exists
   createPeer();
   await peer.setRemoteDescription(offer);
   const answer = await peer.createAnswer();
@@ -171,7 +169,7 @@ function appendMessage(text, type) {
 async function startVideoStream() {
   localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
   localVideo.srcObject = localStream;
-  remoteStream = new MediaStream();
+  remoteStream = new MediaStream(); // ensure fresh stream
   remoteVideo.srcObject = remoteStream;
 }
 
@@ -184,6 +182,7 @@ function stopVideoStream() {
     peer.close();
     peer = null;
   }
+  remoteStream = null;
   localVideo.srcObject = null;
   remoteVideo.srcObject = null;
 }
@@ -191,7 +190,7 @@ function stopVideoStream() {
 function createPeer() {
   peer = new RTCPeerConnection({
     iceServers: [
-      { urls: "stun:stun.l.google.com:19302" } // Free Google STUN
+      { urls: "stun:stun.l.google.com:19302" }
     ]
   });
 
