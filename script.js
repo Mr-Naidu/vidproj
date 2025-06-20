@@ -23,6 +23,8 @@ let currentMode = null;
 let localStream;
 let remoteStream;
 let peer;
+let remoteDescSet = false;
+let queuedCandidates = [];
 
 // ==== MODE SELECT ====
 textModeBtn.onclick = () => {
@@ -145,17 +147,44 @@ socket.on("webrtc-offer", async (offer) => {
   await startVideoStream();
   createPeer();
   await peer.setRemoteDescription(offer);
+  remoteDescSet = true;
   const answer = await peer.createAnswer();
   await peer.setLocalDescription(answer);
   socket.emit("webrtc-answer", answer);
+  // process queued ICE candidates
+  for (let c of queuedCandidates) {
+    try {
+      await peer.addIceCandidate(c);
+    } catch (e) {
+      console.error("ICE error (queued):", e);
+    }
+  }
+  queuedCandidates = [];
 });
 
 socket.on("webrtc-answer", async (answer) => {
   await peer.setRemoteDescription(answer);
+  remoteDescSet = true;
+  for (let c of queuedCandidates) {
+    try {
+      await peer.addIceCandidate(c);
+    } catch (e) {
+      console.error("ICE error (queued):", e);
+    }
+  }
+  queuedCandidates = [];
 });
 
 socket.on("webrtc-ice", async (ice) => {
-  if (peer) await peer.addIceCandidate(ice);
+  if (!remoteDescSet) {
+    queuedCandidates.push(ice);
+  } else {
+    try {
+      await peer.addIceCandidate(ice);
+    } catch (e) {
+      console.error("ICE error:", e);
+    }
+  }
 });
 
 // ==== FUNCTIONS ====
@@ -173,9 +202,9 @@ async function startVideoStream() {
     localVideo.srcObject = localStream;
     remoteStream = new MediaStream();
     remoteVideo.srcObject = remoteStream;
-  } catch (error) {
-    console.error("🚫 Failed to access webcam/microphone:", error);
-    videoStatus.textContent = "🚫 Please allow camera & mic access";
+  } catch (err) {
+    console.error("Permission error:", err);
+    videoStatus.textContent = "🚫 Please allow camera and mic.";
   }
 }
 
@@ -191,6 +220,8 @@ function stopVideoStream() {
   remoteStream = null;
   localVideo.srcObject = null;
   remoteVideo.srcObject = null;
+  remoteDescSet = false;
+  queuedCandidates = [];
 }
 
 function createPeer() {
@@ -223,6 +254,9 @@ function createPeer() {
   };
 
   peer.onicecandidate = (e) => {
-    if (e.candidate) socket.emit("webrtc-ice", e.candidate);
+    if (e.candidate) {
+      console.log("ICE candidate:", e.candidate);
+      socket.emit("webrtc-ice", e.candidate);
+    }
   };
 }
