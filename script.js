@@ -168,10 +168,15 @@ function appendMessage(text, type) {
 }
 
 async function startVideoStream() {
-  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-  localVideo.srcObject = localStream;
-  remoteStream = new MediaStream();
-  remoteVideo.srcObject = remoteStream;
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localVideo.srcObject = localStream;
+    remoteStream = new MediaStream();
+    remoteVideo.srcObject = remoteStream;
+  } catch (error) {
+    console.error("🚫 Failed to access webcam/microphone:", error);
+    videoStatus.textContent = "🚫 Please allow camera & mic access";
+  }
 }
 
 function stopVideoStream() {
@@ -196,9 +201,9 @@ function createPeer() {
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },
       {
-        urls: "turn:relay1.expressturn.com:3478",
-        username: "efJH9yXxXt2w0gP02k3xvA==",
-        credential: "u2TH73+1zN8zAzKFd1b+gWc9BOI="
+        urls: "turn:numb.viagenie.ca",
+        username: "webrtc@live.com",
+        credential: "muazkh"
       }
     ]
   });
@@ -206,13 +211,12 @@ function createPeer() {
   localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
 
   peer.ontrack = (e) => {
-    console.log("✅ ontrack fired");
+    console.log("✅ ontrack fired with stream:", e.streams[0]);
     e.streams[0].getTracks().forEach(track => {
       remoteStream.addTrack(track);
     });
   };
 
-  // 🔁 Fallback for older browsers
   peer.onaddstream = (e) => {
     console.log("⚠️ onaddstream fallback fired");
     remoteVideo.srcObject = e.stream;
