@@ -196,15 +196,15 @@ function createPeer() {
   remoteVideo.srcObject = remoteStream;
 
   peer = new RTCPeerConnection({
-    iceServers: [
-      { urls: "stun:stun.l.google.com:19302" },
-      {
-        urls: "turn:relay1.expressturn.com:3478",
-        username: "efJH9yXxXt2w0gP02k3xvA==",
-        credential: "u2TH73+1zN8zAzKFd1b+gWc9BOI=",
-      },
-    ],
-  });
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    {
+      urls: "turn:relay1.expressturn.com:3478",
+      username: "efJH9yXxXt2w0gP02k3xvA==",
+      credential: "u2TH73+1zN8zAzKFd1b+gWc9BOI="
+    }
+  ]
+});
 
   localStream.getTracks().forEach((track) => peer.addTrack(track, localStream));
 
