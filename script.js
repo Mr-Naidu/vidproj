@@ -40,8 +40,8 @@ videoModeBtn.onclick = async () => {
   unifiedBox.classList.remove("hidden");
   textUI.classList.add("hidden");
   videoUI.classList.remove("hidden");
-  socket.emit("set-mode", "video");
   await startVideoStream();
+  socket.emit("set-mode", "video");
 };
 
 // ==== CHAT SEND ====
@@ -71,13 +71,14 @@ messageInput.onkeydown = (e) => {
 
 // ==== SWITCH CHAT / VIDEO ====
 switchToVideoBtn.onclick = async () => {
+  stopVideoStream();
   socket.disconnect();
   textUI.classList.add("hidden");
   videoUI.classList.remove("hidden");
   currentMode = "video";
+  await startVideoStream();
   socket.connect();
   socket.emit("set-mode", "video");
-  await startVideoStream();
 };
 
 switchToChatBtn.onclick = () => {
@@ -103,8 +104,8 @@ nextVideoBtn.onclick = async () => {
   stopVideoStream();
   socket.disconnect();
   socket.connect();
-  socket.emit("set-mode", "video");
   await startVideoStream();
+  socket.emit("set-mode", "video");
 };
 
 // ==== SOCKET EVENTS ====
@@ -119,7 +120,7 @@ socket.on("match", async () => {
   appendMessage("✅ Connected to a stranger!", "bot");
   if (currentMode === "video") {
     videoStatus.textContent = "✅ Connected!";
-    createPeer(); // must be here too
+    createPeer();
     if (peer.localDescription) return;
     const offer = await peer.createOffer();
     await peer.setLocalDescription(offer);
@@ -141,7 +142,7 @@ socket.on("partner-disconnected", () => {
 
 // ==== WEBRTC SIGNALING ====
 socket.on("webrtc-offer", async (offer) => {
-  await startVideoStream(); // ensure local stream exists
+  await startVideoStream();
   createPeer();
   await peer.setRemoteDescription(offer);
   const answer = await peer.createAnswer();
@@ -169,7 +170,7 @@ function appendMessage(text, type) {
 async function startVideoStream() {
   localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
   localVideo.srcObject = localStream;
-  remoteStream = new MediaStream(); // ensure fresh stream
+  remoteStream = new MediaStream();
   remoteVideo.srcObject = remoteStream;
 }
 
@@ -188,7 +189,6 @@ function stopVideoStream() {
 }
 
 function createPeer() {
-  // Always create fresh remote stream before any tracks are added
   remoteStream = new MediaStream();
   remoteVideo.srcObject = remoteStream;
 
@@ -203,20 +203,22 @@ function createPeer() {
     ]
   });
 
-  // Add local stream tracks
   localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
 
-  // Listen for remote tracks
   peer.ontrack = (e) => {
-    console.log("👀 Received remote track");
+    console.log("✅ ontrack fired");
     e.streams[0].getTracks().forEach(track => {
       remoteStream.addTrack(track);
     });
   };
 
-  // Send ICE candidates
+  // 🔁 Fallback for older browsers
+  peer.onaddstream = (e) => {
+    console.log("⚠️ onaddstream fallback fired");
+    remoteVideo.srcObject = e.stream;
+  };
+
   peer.onicecandidate = (e) => {
     if (e.candidate) socket.emit("webrtc-ice", e.candidate);
   };
 }
-
