@@ -20,11 +20,9 @@ const switchToChatBtn = document.getElementById("switchToChatBtn");
 const nextVideoBtn = document.getElementById("nextVideoBtn");
 
 let currentMode = null;
-let localStream;
-let remoteStream;
-let peer;
-let remoteDescSet = false;
-let queuedCandidates = [];
+let localStream = null;
+let remoteStream = null;
+let peer = null;
 
 // ==== MODE SELECT ====
 textModeBtn.onclick = () => {
@@ -73,7 +71,6 @@ messageInput.onkeydown = (e) => {
 
 // ==== SWITCH CHAT / VIDEO ====
 switchToVideoBtn.onclick = async () => {
-  stopVideoStream();
   socket.disconnect();
   textUI.classList.add("hidden");
   videoUI.classList.remove("hidden");
@@ -123,10 +120,14 @@ socket.on("match", async () => {
   if (currentMode === "video") {
     videoStatus.textContent = "✅ Connected!";
     createPeer();
-    if (peer.localDescription) return;
-    const offer = await peer.createOffer();
-    await peer.setLocalDescription(offer);
-    socket.emit("webrtc-offer", offer);
+
+    // Delay offer to avoid ICE state issues
+    setTimeout(async () => {
+      if (!peer || peer.signalingState !== "stable") return;
+      const offer = await peer.createOffer();
+      await peer.setLocalDescription(offer);
+      socket.emit("webrtc-offer", offer);
+    }, 300);
   }
 });
 
@@ -147,44 +148,17 @@ socket.on("webrtc-offer", async (offer) => {
   await startVideoStream();
   createPeer();
   await peer.setRemoteDescription(offer);
-  remoteDescSet = true;
   const answer = await peer.createAnswer();
   await peer.setLocalDescription(answer);
   socket.emit("webrtc-answer", answer);
-  // process queued ICE candidates
-  for (let c of queuedCandidates) {
-    try {
-      await peer.addIceCandidate(c);
-    } catch (e) {
-      console.error("ICE error (queued):", e);
-    }
-  }
-  queuedCandidates = [];
 });
 
 socket.on("webrtc-answer", async (answer) => {
-  await peer.setRemoteDescription(answer);
-  remoteDescSet = true;
-  for (let c of queuedCandidates) {
-    try {
-      await peer.addIceCandidate(c);
-    } catch (e) {
-      console.error("ICE error (queued):", e);
-    }
-  }
-  queuedCandidates = [];
+  if (peer) await peer.setRemoteDescription(answer);
 });
 
 socket.on("webrtc-ice", async (ice) => {
-  if (!remoteDescSet) {
-    queuedCandidates.push(ice);
-  } else {
-    try {
-      await peer.addIceCandidate(ice);
-    } catch (e) {
-      console.error("ICE error:", e);
-    }
-  }
+  if (peer) await peer.addIceCandidate(ice);
 });
 
 // ==== FUNCTIONS ====
@@ -197,31 +171,24 @@ function appendMessage(text, type) {
 }
 
 async function startVideoStream() {
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    localVideo.srcObject = localStream;
-    remoteStream = new MediaStream();
-    remoteVideo.srcObject = remoteStream;
-  } catch (err) {
-    console.error("Permission error:", err);
-    videoStatus.textContent = "🚫 Please allow camera and mic.";
-  }
+  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  localVideo.srcObject = localStream;
+  remoteStream = new MediaStream();
+  remoteVideo.srcObject = remoteStream;
 }
 
 function stopVideoStream() {
   if (localStream) {
-    localStream.getTracks().forEach(t => t.stop());
+    localStream.getTracks().forEach((t) => t.stop());
     localStream = null;
   }
   if (peer) {
     peer.close();
     peer = null;
   }
+  remoteVideo.srcObject = null;
   remoteStream = null;
   localVideo.srcObject = null;
-  remoteVideo.srcObject = null;
-  remoteDescSet = false;
-  queuedCandidates = [];
 }
 
 function createPeer() {
@@ -232,31 +199,31 @@ function createPeer() {
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },
       {
-        urls: "turn:numb.viagenie.ca",
-        username: "webrtc@live.com",
-        credential: "muazkh"
-      }
-    ]
+        urls: "turn:relay1.expressturn.com:3478",
+        username: "efJH9yXxXt2w0gP02k3xvA==",
+        credential: "u2TH73+1zN8zAzKFd1b+gWc9BOI=",
+      },
+    ],
   });
 
-  localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
+  localStream.getTracks().forEach((track) => peer.addTrack(track, localStream));
 
-  peer.ontrack = (e) => {
-    console.log("✅ ontrack fired with stream:", e.streams[0]);
-    e.streams[0].getTracks().forEach(track => {
-      remoteStream.addTrack(track);
+  peer.ontrack = (event) => {
+    console.log("✅ ontrack fired");
+    event.streams[0].getTracks().forEach((track) => {
+      if (!remoteStream.getTracks().find(t => t.id === track.id)) {
+        remoteStream.addTrack(track);
+      }
     });
   };
 
-  peer.onaddstream = (e) => {
-    console.log("⚠️ onaddstream fallback fired");
-    remoteVideo.srcObject = e.stream;
+  peer.onicecandidate = (e) => {
+    if (e.candidate) socket.emit("webrtc-ice", e.candidate);
   };
 
-  peer.onicecandidate = (e) => {
-    if (e.candidate) {
-      console.log("ICE candidate:", e.candidate);
-      socket.emit("webrtc-ice", e.candidate);
-    }
+  // 🔁 Optional fallback
+  peer.onaddstream = (event) => {
+    console.log("⚠️ onaddstream fallback fired");
+    remoteVideo.srcObject = event.stream;
   };
 }
