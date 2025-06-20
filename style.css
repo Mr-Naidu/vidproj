@@ -124,6 +124,12 @@ body {
   display: none !important;
 }
 
+#videoStatus {
+  margin-bottom: 10px;
+  font-weight: bold;
+  color: #00ffcc;
+  text-align: center;
+}
 
 /* Buttons */
 button {

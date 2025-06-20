@@ -13,6 +13,9 @@ const messages = document.getElementById("messages");
 const nextBtn = document.getElementById("nextBtn");
 const switchToVideoBtn = document.getElementById("switchToVideoBtn");
 
+const videoStatus = document.getElementById("videoStatus");
+
+
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 const switchToChatBtn = document.getElementById("switchToChatBtn");
@@ -109,11 +112,15 @@ nextVideoBtn.onclick = async () => {
 // ==== SOCKET EVENTS ====
 socket.on("waiting", () => {
   appendMessage("⏳ Waiting for a partner...", "bot");
+  if (currentMode === "video") {
+    videoStatus.textContent = "⏳ Waiting for a partner...";
+  }
 });
 
 socket.on("match", async () => {
   appendMessage("✅ Connected to a stranger!", "bot");
   if (currentMode === "video") {
+    videoStatus.textContent = "✅ Connected!";
     createPeer();
     if (peer.localDescription) return;
     const offer = await peer.createOffer();
@@ -128,8 +135,12 @@ socket.on("message", (msg) => {
 
 socket.on("partner-disconnected", () => {
   appendMessage("❌ Stranger disconnected.", "bot");
+  if (currentMode === "video") {
+    videoStatus.textContent = "❌ Stranger disconnected.";
+  }
   stopVideoStream();
 });
+
 
 // ==== WEBRTC SIGNALING ====
 socket.on("webrtc-offer", async (offer) => {
@@ -178,7 +189,12 @@ function stopVideoStream() {
 }
 
 function createPeer() {
-  peer = new RTCPeerConnection();
+  peer = new RTCPeerConnection({
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" } // Free Google STUN
+    ]
+  });
+
   localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
 
   peer.onicecandidate = (e) => {
